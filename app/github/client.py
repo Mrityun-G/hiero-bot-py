@@ -533,14 +533,15 @@ class GitHubClient:
         self, owner: str, repo: str, number: int, label: str, installation_id: int
     ) -> None:
         """Remove a label from an issue/PR, tolerating it already being absent."""
+        encoded_label = urllib.parse.quote(label, safe="")
         try:
             await self.delete(
-                f"/repos/{owner}/{repo}/issues/{number}/labels/{label}",
+                f"/repos/{owner}/{repo}/issues/{number}/labels/{encoded_label}",
                 installation_id,
             )
-        except httpx.HTTPStatusError:
-            # Label wasn't applied (404) or was already removed — nothing to do.
-            pass
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code != 404:
+                raise
 
     async def add_assignees(
         self,

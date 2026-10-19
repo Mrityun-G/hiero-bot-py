@@ -737,7 +737,7 @@ async def test_remove_label_deletes_the_issue_label():
         )
 
     mock_delete.assert_awaited_once_with(
-        "/repos/hiero/sdk-js/issues/7/labels/health: 🔧 needs work",
+        "/repos/hiero/sdk-js/issues/7/labels/health%3A%20%F0%9F%94%A7%20needs%20work",
         123,
     )
 
@@ -760,6 +760,24 @@ async def test_remove_label_tolerates_label_already_absent():
         await client.remove_label("hiero", "sdk-js", 7, "quality: ✅ passed", 123)
 
     mock_delete.assert_awaited_once()
+
+    await client.close()
+
+
+@pytest.mark.asyncio
+async def test_remove_label_propagates_non_404_errors():
+    client = GitHubClient()
+    error = httpx.HTTPStatusError(
+        "Forbidden", request=Mock(), response=Mock(status_code=403)
+    )
+
+    with patch.object(
+        client, "delete", new=AsyncMock(side_effect=error)
+    ):
+        with pytest.raises(httpx.HTTPStatusError) as raised:
+            await client.remove_label("hiero", "sdk-js", 7, "needs/review", 123)
+
+    assert raised.value is error
 
     await client.close()
 
